@@ -10,7 +10,7 @@
 
 module edabk_io_fifo #(
   parameter DATA_WIDTH    = `CFG_DATA_WIDTH                            , // Number of bits which is transmitted
-  parameter ADDRESS_WIDTH = 8                                            // Number of address bits
+  parameter ADDRESS_WIDTH = `CFG_FIFO_ADDRESS_WIDTH                      // Number of address bits
 )
 (
   input                   clk       ,  // Clock signal
