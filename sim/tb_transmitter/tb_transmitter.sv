@@ -4,16 +4,18 @@ module tb_transmitter;
 
   parameter DATA_WIDTH = `CFG_DATA_WIDTH;
 
+  // Signals and variables of transmitter
   reg                  clk     ;
   reg                  reset_n ;
   reg [2:0]            baudrate;
   wire                 bclk    ;
   reg                  start   ;
+  reg                  parity  ;
   reg [DATA_WIDTH-1:0] tx_in   ;
   wire                 tx_out  ;
   wire                 finish  ;
 
-
+  // Signals and variables of fifo
   reg                  write     ;
   reg                  read      ;
   reg                  flush     ;
@@ -45,16 +47,18 @@ module tb_transmitter;
     .bclk   (bclk   ),
     .reset_n(reset_n),
     .start  (start  ),
+    .parity (parity ),
     .tx_in  (tx_in  ),
     .tx_out (tx_out ),
     .finish (finish ) 
   );
 
   initial begin
-    clk = 0;
-    reset_n = 0;
-    start = 0;
-    tx_in = 0;
+    clk      = 0;
+    reset_n  = 0;
+    start    = 0;
+    parity   = 1;
+    tx_in    = 0;
     baudrate = 3'b011;
   end
 

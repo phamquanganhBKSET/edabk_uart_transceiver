@@ -3,7 +3,7 @@
 //    Module: edabk_transmitter_controller
 //    Author: anhpq0
 //    Date: 26/01/2022
-//    Modify: 
+//    Modify: 27/02/2022
 //-------------------------------------------------------------------------------------------------------------------
 
 `include "../inc/edabk_uart_transceiver_define.svh"
@@ -20,6 +20,7 @@ module edabk_transmitter_controller #(
   input      bclk   ,  // Baud clock signal
   input      reset_n,  // Asynchronous reset active low
   input      start  ,  // Start transmission
+  input      parity ,  // Determine whether the frame has parity bit or not
   input      done   ,  // Successfully transmit a bit
   output reg shift  ,  // Shift datareg
   output reg load   ,  // Load data to datareg
@@ -27,13 +28,17 @@ module edabk_transmitter_controller #(
   output reg finish    // Successfully transmit DATA_WIDTH bits
 );
 
+  // Declare states
   localparam IDLE     = 2'b00,
              TRANSMIT = 2'b01,
-             WAIT     = 2'b10;
+             WAIT     = 2'b10,
+             LAST     = 2'b11;
 
-  reg [1:0] current_state, next_state;
-
-  reg [COUNT_WIDTH-1:0] count; // counter variable: count from 0 to DATAWIDTH
+  // Intenal signals and variables
+  reg [1:0]             current_state, 
+                        next_state   ; // Determine state
+  reg [COUNT_WIDTH-1:0] data_count   ; // counter variable: count from 0 to count_to
+  reg [COUNT_WIDTH-1:0] count_to     ; // Declare the maximum value of data_count
 
   //-----------------------------------------------------------------
   // Clocked Block for ASMD
@@ -41,14 +46,18 @@ module edabk_transmitter_controller #(
   
   always @(posedge bclk, negedge reset_n) begin : clocked_block
     if(~reset_n) begin
+      // Reset current_state
       current_state <= IDLE;
+
       // Reset values
       shift         <= 1'b0;
       load          <= 1'b0;
       clear         <= 1'b1;
       finish        <= 1'b0;
-      count         <= 0   ;
+      data_count    <= 0   ;
+      count_to      <= 0   ;
     end else begin
+      // Update state
       current_state <= next_state;
     end
   end
@@ -63,7 +72,7 @@ module edabk_transmitter_controller #(
     shift        ,
     load         ,
     clear        ,
-    count        ,
+    data_count   ,
     current_state 
   )
   begin : next_state_block
@@ -78,8 +87,8 @@ module edabk_transmitter_controller #(
       end
 
       TRANSMIT : begin
-        if (count == DATA_WIDTH + 1) begin
-          next_state = IDLE;
+        if (data_count == count_to) begin
+          next_state = LAST;
         end
         else begin
           next_state = WAIT;
@@ -92,6 +101,15 @@ module edabk_transmitter_controller #(
         end
         else begin
           next_state = WAIT;
+        end
+      end
+
+      LAST : begin
+        if (done == 1) begin
+          next_state = IDLE;
+        end
+        else begin
+          next_state = LAST;
         end
       end
 
@@ -111,7 +129,7 @@ module edabk_transmitter_controller #(
     shift        ,
     load         ,
     clear        ,
-    count        ,
+    data_count   ,
     current_state 
   )
   begin : output_block
@@ -125,25 +143,25 @@ module edabk_transmitter_controller #(
     case (current_state)
       IDLE : begin
         if (start) begin
-          load  = 1'b1;
-          clear = 1'b0;
-          count = 0   ;
+          load       = 1'b1;
+          clear      = 1'b0;
+          data_count = 0   ;
+          count_to   = (parity == 1) ? DATA_WIDTH + 1 : DATA_WIDTH;
         end
         else begin
-          shift  = 1'b0;
-          load   = 1'b0;
-          clear  = 1'b1;
-          finish = 1'b0;
-          count  = 0   ;
+          shift      = 1'b0;
+          load       = 1'b0;
+          clear      = 1'b1;
+          finish     = 1'b0;
+          data_count = 0   ;
         end
       end
 
       TRANSMIT : begin
-        if (count == DATA_WIDTH + 1) begin
-          shift  = 1'b0;
-          load   = 1'b0;
-          clear  = 1'b1;
-          finish = 1'b1;
+        if (data_count == count_to) begin
+          shift = 1'b0;
+          load  = 1'b0;
+          clear = 1'b0;
         end
         else begin
           load  = 1'b0;
@@ -157,9 +175,20 @@ module edabk_transmitter_controller #(
           clear = 1'b0;
         end
         else begin
-          shift = 1'b0     ;
-          clear = 1'b0     ;
-          count = count + 1;
+          shift      = 1'b0          ;
+          clear      = 1'b0          ;
+          data_count = data_count + 1;
+        end
+      end
+
+      LAST : begin
+        if (done == 1) begin
+          clear  = 1'b1;
+          finish = 1'b1;
+        end
+        else begin
+          shift = 1'b0;
+          clear = 1'b0;
         end
       end
     endcase

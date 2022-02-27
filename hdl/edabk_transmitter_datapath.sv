@@ -3,7 +3,7 @@
 //    Module: edabk_transmitter_datapath
 //    Author: anhpq0
 //    Date: 26/01/2022
-//    Modify: 
+//    Modify: 27/02/2022
 //-------------------------------------------------------------------------------------------------------------------
 
 `include "../inc/edabk_uart_transceiver_define.svh"
@@ -20,6 +20,7 @@ module edabk_transmitter_datapath #(
   input                   bclk   ,  // Baud clock signal
   input                   reset_n,  // Asynchronous reset active low
   input  [DATA_WIDTH-1:0] tx_in  ,  // Data in
+  input                   parity ,  // Determine whether the frame has parity bit or not
   input                   shift  ,  // Shift datareg
   input                   load   ,  // Load data to datareg
   input                   clear  ,  // Clear datareg
@@ -27,17 +28,10 @@ module edabk_transmitter_datapath #(
   output                  tx_out    // Data out
 );
 
-  wire [DATA_WIDTH:0]    data_in; // data_in signal
-
-  reg  [DATA_WIDTH:0]    datareg; // data stored in shift register
-
-  reg  [COUNT_WIDTH-1:0] count  ; // counter variable: count from 0 to CLK_DIV - 1
-
-  //-----------------------------------------------------------------
-  // Data_in assignment
-  //-----------------------------------------------------------------
-  
-  assign data_in = (load == 1) ? {tx_in, 1'b0} : {1'b1, datareg[DATA_WIDTH:1]};
+  // Intenal signals and variables
+  wire [DATA_WIDTH+1:0]    data_in; // data_in signal
+  reg  [DATA_WIDTH+1:0]    datareg; // data stored in shift register
+  reg  [COUNT_WIDTH-1:0]   count  ; // counter variable: count from 0 to CLK_DIV - 1
 
   //-----------------------------------------------------------------
   // Data shift register
@@ -51,11 +45,11 @@ module edabk_transmitter_datapath #(
         datareg <= {(DATA_WIDTH+1){1'b1}};
       end
       else if (load) begin
-        datareg[0] <= 0;
-        datareg[DATA_WIDTH:1] <= tx_in;
+        datareg[DATA_WIDTH:0] <= {tx_in, 1'b0};
+        datareg[DATA_WIDTH+1] <= (parity == 1) ? ~(^tx_in) : 1'b1;
       end
       else if (shift) begin
-        datareg <= data_in;
+        datareg <= {1'b1, datareg[DATA_WIDTH+1:1]};
       end
       else begin
         datareg <= datareg;

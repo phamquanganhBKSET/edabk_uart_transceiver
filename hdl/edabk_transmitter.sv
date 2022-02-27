@@ -3,7 +3,7 @@
 //    Module: edabk_transmitter
 //    Author: anhpq0
 //    Date: 26/01/2022
-//    Modify: 
+//    Modify: 27/02/2022
 //-------------------------------------------------------------------------------------------------------------------
 
 `include "../inc/edabk_uart_transceiver_define.svh"
@@ -19,6 +19,7 @@ module edabk_transmitter #(
   input                   bclk   ,  // Baud clock signal
   input                   reset_n,  // Asynchronous reset active low
   input                   start  ,  // Start transmission
+  input                   parity ,  // Determine whether the frame has parity bit or not
   input  [DATA_WIDTH-1:0] tx_in  ,  // Data in
   output                  tx_out ,  // Data out
   output                  finish    // Successfully transmit DATA_WIDTH bits
@@ -33,6 +34,7 @@ module edabk_transmitter #(
     .bclk   (bclk   ),
     .reset_n(reset_n),
     .start  (start  ),
+    .parity (parity ),
     .done   (done   ),
     .shift  (shift  ),
     .load   (load   ),
@@ -44,6 +46,7 @@ module edabk_transmitter #(
     .bclk   (bclk   ),
     .reset_n(reset_n),
     .tx_in  (tx_in  ),
+    .parity (parity ),
     .shift  (shift  ),
     .load   (load   ),
     .clear  (clear  ),
