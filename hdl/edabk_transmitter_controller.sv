@@ -31,8 +31,7 @@ module edabk_transmitter_controller #(
   // Declare states
   localparam IDLE     = 2'b00,
              TRANSMIT = 2'b01,
-             WAIT     = 2'b10,
-             LAST     = 2'b11;
+             WAIT     = 2'b10;
 
   // Intenal signals and variables
   reg [1:0]             current_state, 
@@ -88,7 +87,7 @@ module edabk_transmitter_controller #(
 
       TRANSMIT : begin
         if (data_count == count_to) begin
-          next_state = LAST;
+          next_state = IDLE;
         end
         else begin
           next_state = WAIT;
@@ -101,15 +100,6 @@ module edabk_transmitter_controller #(
         end
         else begin
           next_state = WAIT;
-        end
-      end
-
-      LAST : begin
-        if (done == 1) begin
-          next_state = IDLE;
-        end
-        else begin
-          next_state = LAST;
         end
       end
 
@@ -146,7 +136,7 @@ module edabk_transmitter_controller #(
           load       = 1'b1;
           clear      = 1'b0;
           data_count = 0   ;
-          count_to   = (parity == 1) ? DATA_WIDTH + 1 : DATA_WIDTH;
+          count_to   = (parity == 1) ? DATA_WIDTH + 2 : DATA_WIDTH + 1;
         end
         else begin
           shift      = 1'b0;
@@ -159,9 +149,10 @@ module edabk_transmitter_controller #(
 
       TRANSMIT : begin
         if (data_count == count_to) begin
-          shift = 1'b0;
-          load  = 1'b0;
-          clear = 1'b0;
+          shift  = 1'b0;
+          load   = 1'b0;
+          clear  = 1'b1;
+          finish = 1'b1;
         end
         else begin
           load  = 1'b0;
@@ -178,17 +169,6 @@ module edabk_transmitter_controller #(
           shift      = 1'b0          ;
           clear      = 1'b0          ;
           data_count = data_count + 1;
-        end
-      end
-
-      LAST : begin
-        if (done == 1) begin
-          clear  = 1'b1;
-          finish = 1'b1;
-        end
-        else begin
-          shift = 1'b0;
-          clear = 1'b0;
         end
       end
     endcase
